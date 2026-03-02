@@ -1,0 +1,25 @@
+Get-ChildItem -Filter *.zip | ForEach-Object {
+
+    if ($_.Name -match "(\d{2})(\d{4})") {
+
+        $month = [int]$matches[1]
+        $year  = $matches[2].Substring(2,2)
+
+        $monthName = (Get-Culture).DateTimeFormat.GetMonthName($month).Substring(0,3)
+        $newName = "$monthName $year"
+
+        # Extract zip into its own folder
+        $extractPath = Join-Path $_.DirectoryName $_.BaseName
+        Expand-Archive $_.FullName -DestinationPath $extractPath -Force
+
+        # Find the PDF inside that folder (recursively)
+        $pdf = Get-ChildItem $extractPath -Recurse -Filter *.pdf | Select-Object -First 1
+
+        if ($pdf) {
+            Move-Item $pdf.FullName "$($_.DirectoryName)\$newName.pdf" -Force
+        }
+
+        # Remove the extracted folder
+        Remove-Item $extractPath -Recurse -Force
+    }
+}
